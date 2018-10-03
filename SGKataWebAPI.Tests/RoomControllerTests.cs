@@ -1,34 +1,50 @@
-using System;
-using Xunit;
-using Moq;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
+using Moq;
+using SGKataWebAPI.Controllers;
+using SGKataWebAPI.Models.Dto;
+using SGKataWebAPI.Services.Interfaces;
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace SGKataWebAPI.Tests
 {
     public class RoomControllerTests
     {
-        Mock<Services.Interfaces.IRoomService> _roomServiceMock;
+        private RoomController _roomController;
+        private Mock<IRoomService> _mockRoomService;
 
         public RoomControllerTests()
         {
-            _roomServiceMock = new Mock<Services.Interfaces.IRoomService>();
+            List<RoomDto> rooms = new List<RoomDto>
+            {
+                new RoomDto { Name = "room0" },
+                new RoomDto { Name = "room1" },
+                new RoomDto { Name = "room2" },
+            };
+
+            _mockRoomService = new Mock<IRoomService>();
+            _mockRoomService.Setup(repo => repo.GetRooms()).ReturnsAsync(rooms);
+
+            _roomController = new RoomController(_mockRoomService.Object);
         }
 
         [Fact]
-        public void GetRooms()
+        public async Task Get_WhenCalled_ReturnsOkResult()
         {
-            List<Models.Dto.RoomDto> rooms = new List<Models.Dto.RoomDto> { new Models.Dto.RoomDto { Name = "room0" } };
-            _roomServiceMock.Setup(_ => _.GetRooms()).ReturnsAsync(rooms);
+            IActionResult result = await _roomController.Get();
 
-            Controllers.RoomController roomController = new Controllers.RoomController(_roomServiceMock.Object);
-            Task<IActionResult> result = roomController.Get();
+            Assert.IsType<OkObjectResult>(result);
+        }
 
-            OkObjectResult okResult = result.Result as OkObjectResult;
+        [Fact]
+        public async Task Get_WhenCalled_ReturnsAllRooms()
+        {
+            OkObjectResult okResult = await _roomController.Get() as OkObjectResult;
 
-            Assert.NotNull(okResult);
-            Assert.True(okResult.StatusCode == 200);
+            List<RoomDto> items = Assert.IsType<List<RoomDto>>(okResult.Value);
+            Assert.Equal(3, items.Count);
         }
     }
 }
